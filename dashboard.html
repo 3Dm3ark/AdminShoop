@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Panel de Administración</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SDK de Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+
+  <!-- Barra Superior de Admin -->
+  <header class="bg-white shadow-sm sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-xl font-bold text-gray-900">🛠️ Panel Admin - Franelas</h1>
+        <nav class="hidden md:flex space-x-2">
+          <button onclick="switchTab('products')" id="tab-products-btn" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-900 text-white transition">Productos</button>
+          <button onclick="switchTab('orders')" id="tab-orders-btn" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition">Pedidos y Fechas</button>
+          <button onclick="switchTab('settings')" id="tab-settings-btn" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition">Ajustes</button>
+        </nav>
+      </div>
+      <button onclick="logout()" class="text-sm font-medium text-red-600 hover:text-red-800 transition">Cerrar Sesión</button>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+
+    <!-- SECCIÓN 1: GESTIÓN DE PRODUCTOS -->
+    <section id="section-products" class="space-y-6">
+      <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold text-gray-900">Catálogo de Productos</h2>
+        <button onclick="openProductModal()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">+ Nuevo Producto</button>
+      </div>
+
+      <!-- Grid de Productos en Admin -->
+      <div id="admin-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <!-- Renderizado dinámico por JS -->
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: PEDIDOS Y FILTRO POR RANGOS DE FECHA -->
+    <section id="section-orders" class="space-y-6 hidden">
+      <h2 class="text-2xl font-bold text-gray-900">Control de Pedidos y Ventas</h2>
+
+      <!-- Filtros por Rango de Fechas y Accesos Rápidos -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border space-y-4">
+        <div class="flex flex-wrap items-end gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Fecha Inicio</label>
+            <input type="date" id="filter-date-start" class="border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-gray-900">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Fecha Fin</label>
+            <input type="date" id="filter-date-end" class="border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-gray-900">
+          </div>
+          <div class="flex gap-2">
+            <button onclick="filterOrdersByDate()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">Filtrar</button>
+            <button onclick="resetDateFilter()" class="border px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">Limpiar</button>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2 border-t text-xs">
+          <span class="font-medium text-gray-500 self-center">Accesos rápidos:</span>
+          <button onclick="quickDateFilter('today')" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded font-medium text-gray-700">Hoy</button>
+          <button onclick="quickDateFilter('week')" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded font-medium text-gray-700">Últimos 7 días</button>
+          <button onclick="quickDateFilter('month')" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded font-medium text-gray-700">Este mes</button>
+        </div>
+      </div>
+
+      <!-- Tabla de Pedidos -->
+      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead class="bg-gray-50 border-b text-gray-700 font-semibold">
+            <tr>
+              <th class="p-3">Cliente</th>
+              <th class="p-3">Teléfono / Envío</th>
+              <th class="p-3">Total</th>
+              <th class="p-3">Estado / Expiración</th>
+              <th class="p-3">Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="orders-table-body" class="divide-y">
+            <!-- Renderizado dinámico por JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: AJUSTES (Tiempo de Expiración) -->
+    <section id="section-settings" class="space-y-6 hidden max-w-xl">
+      <h2 class="text-2xl font-bold text-gray-900">Configuración General</h2>
+      <div class="bg-white p-6 rounded-xl shadow-sm border space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tiempo de Expiración de Reserva (Minutos)</label>
+          <p class="text-xs text-gray-500 mb-2">Define cuánto tiempo tiene un cliente para pagar su pedido antes de que el stock regrese automáticamente al inventario.</p>
+          <input type="number" id="setting-expiration" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-gray-900">
+        </div>
+        <button onclick="saveSettings()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">Guardar Cambios</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL DE CREAR / EDITAR PRODUCTO -->
+  <div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg p-6 rounded-xl shadow-xl max-h-[90vh] overflow-y-auto">
+      <h2 id="modal-title" class="text-xl font-bold mb-4">Nuevo Producto</h2>
+      <form id="product-form" onsubmit="saveProduct(event)" class="space-y-4">
+        <input type="hidden" id="prod-id">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Franela</label>
+          <input type="text" id="prod-name" required class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio ($)</label>
+            <input type="number" step="0.01" id="prod-price" required class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
+            <input type="number" id="prod-stock" required class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Género / Sección</label>
+            <select id="prod-gender" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+              <option value="caballero">Caballero</option>
+              <option value="dama">Dama</option>
+              <option value="nino">Niño</option>
+              <option value="unica">Única / Unisex</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Orden de Presentación (Sort Order)</label>
+            <input type="number" id="prod-sort" value="0" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tallas Disponibles (Separadas por coma)</label>
+          <input type="text" id="prod-sizes" placeholder="S, M, L, XL, XXXL" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+          <textarea id="prod-desc" rows="2" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Imagen del Producto</label>
+          <input type="file" id="prod-image-file" accept="image/*" class="w-full border rounded-lg p-2 text-sm">
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="closeProductModal()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">Guardar Producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script del Dashboard Admin -->
+  <script src="dashboard.js"></script>
+</body>
+</html>
