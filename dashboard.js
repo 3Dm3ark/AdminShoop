@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'TU_NUEVA_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'TU_NUEVA_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://hfsmxrfvlygudusoyuij.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_KwPDclPcrmdzcS4xclcbZA_Y4ZAcDKu';
 const supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let productsList = [];
