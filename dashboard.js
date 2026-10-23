@@ -48,7 +48,7 @@ function renderAdminProducts(items) {
           <img src="${img}" class="w-full h-40 object-cover">
           <div class="p-4">
             <h3 class="font-bold text-sm mb-1">${product.name}</h3>
-            <p class="text-xs text-gray-500 mb-2">Stock: <b>${product.stock}</b> | Orden: ${product.sort_order}</p>
+            <p class="text-xs text-gray-500 mb-2">Stock: <b>${product.stock}</b> | Tallas: ${product.sizes ? product.sizes.join(', ') : 'N/A'}</p>
             <span class="font-extrabold text-blue-600">$${product.price.toFixed(2)}</span>
           </div>
         </div>
@@ -82,6 +82,8 @@ async function saveProduct(event) {
   const sortOrder = parseInt(document.getElementById('prod-sort').value) || 0;
   const sizesRaw = document.getElementById('prod-sizes').value;
   const sizes = sizesRaw ? sizesRaw.split(',').map(s => s.trim()) : [];
+  const colorsRaw = document.getElementById('prod-colors').value;
+  const colors = colorsRaw ? colorsRaw.split(',').map(c => c.trim()) : [];
   const description = document.getElementById('prod-desc').value;
   const imageFile = document.getElementById('prod-image-file').files[0];
 
@@ -94,7 +96,7 @@ async function saveProduct(event) {
     imageUrl = publicUrlData.publicUrl;
   }
 
-  const productData = { name, price, stock, gender, sort_order: sortOrder, sizes, description };
+  const productData = { name, price, stock, gender, sort_order: sortOrder, sizes, colors, description };
   if (imageUrl) { productData.main_image = imageUrl; productData.images = [imageUrl]; }
 
   if (id) {
@@ -120,6 +122,7 @@ async function editProduct(id) {
   document.getElementById('prod-gender').value = product.gender;
   document.getElementById('prod-sort').value = product.sort_order;
   document.getElementById('prod-sizes').value = product.sizes ? product.sizes.join(', ') : '';
+  document.getElementById('prod-colors').value = product.colors ? product.colors.join(', ') : '';
   document.getElementById('prod-desc').value = product.description || '';
   document.getElementById('product-modal').classList.remove('hidden');
 }
@@ -127,22 +130,20 @@ async function editProduct(id) {
 async function deleteProduct(id) {
   if (!confirm('¿Estás seguro de eliminar este producto?')) return;
   const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
-  if (error) alert('Error al eliminar: ' + error.message);
+  if (error) {
+    if (error.code === '23503') {
+      alert('No se puede eliminar porque tiene historial de ventas. Te sugerimos poner el Stock en 0.');
+    } else {
+      alert('Error al eliminar: ' + error.message);
+    }
+  }
   fetchAdminProducts();
 }
 
 async function fetchAdminOrders() {
-  // Consulta relacional trayendo 'order_items' y el nombre del producto[cite: 6]
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select(`
-      *,
-      order_items (
-        quantity,
-        unit_price,
-        products ( name )
-      )
-    `)
+    .select(`*, order_items ( quantity, unit_price, products ( name ) )`)
     .order('created_at', { ascending: false });
 
   if (error) { console.error('Error cargando órdenes:', error); return; }
@@ -154,13 +155,11 @@ function renderOrders(items) {
   const tbody = document.getElementById('orders-table-body');
   tbody.innerHTML = '';
   if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No se encontraron pedidos.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No se encontraron pedidos.</td></tr>`;
     return;
   }
 
   items.forEach(order => {
-    const dateFormatted = new Date(order.created_at).toLocaleString();
-
     let statusBadge = '';
     if (order.status === 'pendiente') {
       statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">1. Pendiente</span>`;
@@ -191,6 +190,14 @@ function renderOrders(items) {
       ? order.order_items.map(i => `${i.products?.name || 'Producto'} (x${i.quantity})`).join(', ')
       : 'Sin detalle';
 
+    let paymentInfoHtml = `
+      <p class="text-xs font-bold text-gray-800">${order.payment_method || 'N/A'}</p>
+      <p class="text-[11px] font-mono text-gray-600">Ref: ${order.payment_reference || 'S/N'}</p>
+    `;
+    if (order.payment_proof_url) {
+      paymentInfoHtml += `<a href="${order.payment_proof_url}" target="_blank" class="text-[10px] text-blue-600 underline font-semibold">Ver Comprobante 📄</a>`;
+    }
+
     tbody.innerHTML += `
       <tr class="hover:bg-gray-50 border-b">
         <td class="p-3">
@@ -201,9 +208,8 @@ function renderOrders(items) {
           <p class="text-xs font-medium">${order.customer_phone}</p>
           <p class="text-xs text-gray-500 truncate max-w-xs">${order.shipping_address}</p>
         </td>
-        <td class="p-3 text-xs text-gray-700 max-w-xs truncate" title="${itemsSummary}">
-          ${itemsSummary}
-        </td>
+        <td class="p-3 text-xs text-gray-700 max-w-xs truncate" title="${itemsSummary}">${itemsSummary}</td>
+        <td class="p-3">${paymentInfoHtml}</td>
         <td class="p-3 font-bold text-blue-600">$${order.total_amount.toFixed(2)}</td>
         <td class="p-3">${statusBadge}</td>
         <td class="p-3 whitespace-nowrap">${actionButtons}</td>
@@ -214,20 +220,53 @@ function renderOrders(items) {
 
 async function updateOrderStatus(orderId, newStatus) {
   const confirmMsg = newStatus === 'pagado' 
-    ? '¿Confirmas que se ha recibido el pago de este pedido?' 
+    ? '¿Confirmas el pago? Esto descontará automáticamente el stock del inventario.' 
     : '¿Confirmas que este pedido ha sido despachado?';
 
   if (!confirm(confirmMsg)) return;
 
-  const { error } = await supabaseAdmin
-    .from('orders')
-    .update({ status: newStatus })
-    .eq('id', orderId);
+  try {
+    if (newStatus === 'pagado') {
+      const { data: orderItems, error: itemsError } = await supabaseAdmin
+        .from('order_items')
+        .select('product_id, quantity')
+        .eq('order_id', orderId);
 
-  if (error) {
-    alert('Error al actualizar el estado: ' + error.message);
-  } else {
+      if (itemsError) throw itemsError;
+
+      for (const item of orderItems) {
+        const { data: prodData, error: prodError } = await supabaseAdmin
+          .from('products')
+          .select('stock')
+          .eq('id', item.product_id)
+          .single();
+
+        if (prodError) throw prodError;
+
+        const newStock = Math.max(0, prodData.stock - item.quantity);
+
+        const { error: updateStockError } = await supabaseAdmin
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', item.product_id);
+
+        if (updateStockError) throw updateStockError;
+      }
+    }
+
+    const { error: statusError } = await supabaseAdmin
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+
+    if (statusError) throw statusError;
+
+    alert(`¡Pedido actualizado a "${newStatus.toUpperCase()}" exitosamente!`);
     fetchAdminOrders();
+
+  } catch (err) {
+    console.error('Error al actualizar estado y stock:', err);
+    alert('Error al procesar la acción: ' + (err.message || 'Error'));
   }
 }
 
@@ -250,27 +289,9 @@ function resetDateFilter() {
   renderOrders(ordersList);
 }
 
-function quickDateFilter(rangeType) {
-  const now = new Date();
-  let start = new Date(); let end = new Date();
-  if (rangeType === 'today') {
-    start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999);
-  } else if (rangeType === 'week') {
-    start.setDate(now.getDate() - 7); start.setHours(0, 0, 0, 0);
-  } else if (rangeType === 'month') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
-    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  }
-  const filtered = ordersList.filter(order => {
-    const orderDate = new Date(order.created_at);
-    return orderDate >= start && orderDate <= end;
-  });
-  renderOrders(filtered);
-}
-
 async function fetchSettings() {
   const { data } = await supabaseAdmin.from('settings').select('value').eq('key', 'order_expiration_minutes').single();
-  if (data) { document.getElementById('setting-expiration').value = data.value; }
+  if (data) document.getElementById('setting-expiration').value = data.value;
 }
 
 async function saveSettings() {
