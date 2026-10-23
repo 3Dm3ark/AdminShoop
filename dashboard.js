@@ -132,8 +132,20 @@ async function deleteProduct(id) {
 }
 
 async function fetchAdminOrders() {
-  const { data, error } = await supabaseAdmin.from('orders').select('*').order('created_at', { ascending: false });
-  if (error) { console.error(error); return; }
+  // Consulta relacional trayendo 'order_items' y el nombre del producto[cite: 6]
+  const { data, error } = await supabaseAdmin
+    .from('orders')
+    .select(`
+      *,
+      order_items (
+        quantity,
+        unit_price,
+        products ( name )
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('Error cargando órdenes:', error); return; }
   ordersList = data;
   renderOrders(ordersList);
 }
@@ -142,13 +154,45 @@ function renderOrders(items) {
   const tbody = document.getElementById('orders-table-body');
   tbody.innerHTML = '';
   if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No se encontraron pedidos.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No se encontraron pedidos.</td></tr>`;
     return;
   }
+
   items.forEach(order => {
     const dateFormatted = new Date(order.created_at).toLocaleString();
+
+    let statusBadge = '';
+    if (order.status === 'pendiente') {
+      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">1. Pendiente</span>`;
+    } else if (order.status === 'pagado') {
+      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">2. Pagado</span>`;
+    } else if (order.status === 'enviado') {
+      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">3. Enviado 🚚</span>`;
+    } else {
+      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">${order.status}</span>`;
+    }
+
+    let actionButtons = '';
+    if (order.status === 'pendiente') {
+      actionButtons = `
+        <button onclick="updateOrderStatus('${order.id}', 'pagado')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition">
+          Confirmar Pago
+        </button>`;
+    } else if (order.status === 'pagado') {
+      actionButtons = `
+        <button onclick="updateOrderStatus('${order.id}', 'enviado')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition">
+          Confirmar Envío
+        </button>`;
+    } else if (order.status === 'enviado') {
+      actionButtons = `<span class="text-xs text-gray-400 font-medium">Completado</span>`;
+    }
+
+    const itemsSummary = order.order_items && order.order_items.length > 0
+      ? order.order_items.map(i => `${i.products?.name || 'Producto'} (x${i.quantity})`).join(', ')
+      : 'Sin detalle';
+
     tbody.innerHTML += `
-      <tr class="hover:bg-gray-50">
+      <tr class="hover:bg-gray-50 border-b">
         <td class="p-3">
           <p class="font-bold text-gray-900">${order.customer_name}</p>
           <p class="text-xs text-gray-500">${order.customer_email || 'Sin correo'}</p>
@@ -157,16 +201,34 @@ function renderOrders(items) {
           <p class="text-xs font-medium">${order.customer_phone}</p>
           <p class="text-xs text-gray-500 truncate max-w-xs">${order.shipping_address}</p>
         </td>
-        <td class="p-3 font-bold text-blue-600">$${order.total_amount.toFixed(2)}</td>
-        <td class="p-3">
-          <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${order.status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
-            ${order.status.toUpperCase()}
-          </span>
+        <td class="p-3 text-xs text-gray-700 max-w-xs truncate" title="${itemsSummary}">
+          ${itemsSummary}
         </td>
-        <td class="p-3 text-xs text-gray-500">${dateFormatted}</td>
+        <td class="p-3 font-bold text-blue-600">$${order.total_amount.toFixed(2)}</td>
+        <td class="p-3">${statusBadge}</td>
+        <td class="p-3 whitespace-nowrap">${actionButtons}</td>
       </tr>
     `;
   });
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+  const confirmMsg = newStatus === 'pagado' 
+    ? '¿Confirmas que se ha recibido el pago de este pedido?' 
+    : '¿Confirmas que este pedido ha sido despachado?';
+
+  if (!confirm(confirmMsg)) return;
+
+  const { error } = await supabaseAdmin
+    .from('orders')
+    .update({ status: newStatus })
+    .eq('id', orderId);
+
+  if (error) {
+    alert('Error al actualizar el estado: ' + error.message);
+  } else {
+    fetchAdminOrders();
+  }
 }
 
 function filterOrdersByDate() {
