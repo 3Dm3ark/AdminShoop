@@ -36,7 +36,7 @@
         <button onclick="openProductModal()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">+ Nuevo Producto</button>
       </div>
 
-      <!-- Grid de Productos en Admin -->
+      <!-- Grid de Productos -->
       <div id="admin-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <!-- Renderizado dinámico por JS -->
       </div>
@@ -46,7 +46,6 @@
     <section id="section-orders" class="space-y-6 hidden">
       <h2 class="text-2xl font-bold text-gray-900">Control de Pedidos y Ventas</h2>
 
-      <!-- Filtros por Rango de Fechas y Accesos Rápidos -->
       <div class="bg-white p-4 rounded-xl shadow-sm border space-y-4">
         <div class="flex flex-wrap items-end gap-4">
           <div>
@@ -76,10 +75,11 @@
           <thead class="bg-gray-50 border-b text-gray-700 font-semibold">
             <tr>
               <th class="p-3">Cliente</th>
-              <th class="p-3">Teléfono / Envío</th>
+              <th class="p-3">Contacto / Envío</th>
+              <th class="p-3">Detalle Productos</th>
               <th class="p-3">Total</th>
-              <th class="p-3">Estado / Expiración</th>
-              <th class="p-3">Fecha</th>
+              <th class="p-3">Estado</th>
+              <th class="p-3">Acciones Flujo</th>
             </tr>
           </thead>
           <tbody id="orders-table-body" class="divide-y">
@@ -89,13 +89,13 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 3: AJUSTES (Tiempo de Expiración) -->
+    <!-- SECCIÓN 3: AJUSTES -->
     <section id="section-settings" class="space-y-6 hidden max-w-xl">
       <h2 class="text-2xl font-bold text-gray-900">Configuración General</h2>
       <div class="bg-white p-6 rounded-xl shadow-sm border space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Tiempo de Expiración de Reserva (Minutos)</label>
-          <p class="text-xs text-gray-500 mb-2">Define cuánto tiempo tiene un cliente para pagar su pedido antes de que el stock regrese automáticamente al inventario.</p>
+          <p class="text-xs text-gray-500 mb-2">Define cuánto tiempo tiene un cliente para pagar su pedido antes de que el stock regrese al inventario.</p>
           <input type="number" id="setting-expiration" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-gray-900">
         </div>
         <button onclick="saveSettings()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">Guardar Cambios</button>
@@ -135,13 +135,13 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Orden de Presentación (Sort Order)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Orden de Presentación</label>
             <input type="number" id="prod-sort" value="0" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
           </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Tallas Disponibles (Separadas por coma)</label>
-          <input type="text" id="prod-sizes" placeholder="S, M, L, XL, XXXL" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
+          <input type="text" id="prod-sizes" placeholder="S, M, L, XL" class="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2">
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
@@ -159,7 +159,6 @@
     </div>
   </div>
 
-  <!-- Script del Dashboard Admin -->
   <script src="dashboard.js"></script>
 </body>
 </html>
