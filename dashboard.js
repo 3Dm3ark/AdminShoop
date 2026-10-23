@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = 'index.html';
     return;
   }
-
   fetchAdminProducts();
   fetchAdminOrders();
   fetchSettings();
@@ -159,31 +158,50 @@ function renderOrders(items) {
     return;
   }
 
+  const now = new Date();
+
   items.forEach(order => {
+    let status = order.status;
+    if (status === 'pendiente' && order.expires_at) {
+      if (now > new Date(order.expires_at)) {
+        status = 'cancelado';
+      }
+    }
+
     let statusBadge = '';
-    if (order.status === 'pendiente') {
+    if (status === 'pendiente') {
       statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">1. Pendiente</span>`;
-    } else if (order.status === 'pagado') {
+    } else if (status === 'pagado') {
       statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">2. Pagado</span>`;
-    } else if (order.status === 'enviado') {
+    } else if (status === 'enviado') {
       statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">3. Enviado 🚚</span>`;
-    } else {
-      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">${order.status}</span>`;
+    } else if (status === 'cancelado') {
+      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Expirado / Cancelado</span>`;
+    } else if (status === 'rechazado') {
+      statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">Pago Rechazado</span>`;
     }
 
     let actionButtons = '';
-    if (order.status === 'pendiente') {
+    if (status === 'pendiente') {
       actionButtons = `
-        <button onclick="updateOrderStatus('${order.id}', 'pagado')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition">
-          Confirmar Pago
-        </button>`;
-    } else if (order.status === 'pagado') {
+        <div class="flex gap-1">
+          <button onclick="updateOrderStatus('${order.id}', 'pagado')" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-xs font-medium transition">
+            Confirmar Pago
+          </button>
+          <button onclick="updateOrderStatus('${order.id}', 'rechazado')" class="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs font-medium transition" title="Rechazar pago">
+            Rechazar
+          </button>
+          <button onclick="updateOrderStatus('${order.id}', 'cancelado')" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs font-medium transition" title="Cancelar pedido">
+            ✕
+          </button>
+        </div>`;
+    } else if (status === 'pagado') {
       actionButtons = `
         <button onclick="updateOrderStatus('${order.id}', 'enviado')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition">
           Confirmar Envío
         </button>`;
-    } else if (order.status === 'enviado') {
-      actionButtons = `<span class="text-xs text-gray-400 font-medium">Completado</span>`;
+    } else {
+      actionButtons = `<span class="text-xs text-gray-400 font-medium">Sin acciones</span>`;
     }
 
     const itemsSummary = order.order_items && order.order_items.length > 0
@@ -219,9 +237,11 @@ function renderOrders(items) {
 }
 
 async function updateOrderStatus(orderId, newStatus) {
-  const confirmMsg = newStatus === 'pagado' 
-    ? '¿Confirmas el pago? Esto descontará automáticamente el stock del inventario.' 
-    : '¿Confirmas que este pedido ha sido despachado?';
+  let confirmMsg = '';
+  if (newStatus === 'pagado') confirmMsg = '¿Confirmas el pago? Esto descontará el stock del inventario.';
+  else if (newStatus === 'enviado') confirmMsg = '¿Confirmas que el paquete fue despachado?';
+  else if (newStatus === 'rechazado') confirmMsg = '¿Deseas rechazar este pago para que el cliente reenvíe el comprobante?';
+  else if (newStatus === 'cancelado') confirmMsg = '¿Deseas cancelar este pedido?';
 
   if (!confirm(confirmMsg)) return;
 
@@ -244,13 +264,7 @@ async function updateOrderStatus(orderId, newStatus) {
         if (prodError) throw prodError;
 
         const newStock = Math.max(0, prodData.stock - item.quantity);
-
-        const { error: updateStockError } = await supabaseAdmin
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', item.product_id);
-
-        if (updateStockError) throw updateStockError;
+        await supabaseAdmin.from('products').update({ stock: newStock }).eq('id', item.product_id);
       }
     }
 
@@ -261,11 +275,11 @@ async function updateOrderStatus(orderId, newStatus) {
 
     if (statusError) throw statusError;
 
-    alert(`¡Pedido actualizado a "${newStatus.toUpperCase()}" exitosamente!`);
+    alert(`¡Pedido actualizado a "${newStatus.toUpperCase()}"!`);
     fetchAdminOrders();
 
   } catch (err) {
-    console.error('Error al actualizar estado y stock:', err);
+    console.error('Error al actualizar estado:', err);
     alert('Error al procesar la acción: ' + (err.message || 'Error'));
   }
 }
