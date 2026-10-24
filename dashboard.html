@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multicomercio | Panel Admin</title>
+  <title>Dashboard Multicomercio | Panel Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -34,7 +34,7 @@
     </section>
 
     <section id="section-orders" class="space-y-6 hidden">
-      <h2 class="text-2xl font-bold text-gray-900">Control de Pedidos y Ventas</h2>
+      <h2 class="text-2xl font-bold text-gray-900">Control de Pedidos y Etapas</h2>
       <div class="bg-white p-4 rounded-xl shadow-sm border space-y-4">
         <div class="flex flex-wrap items-end gap-4">
           <div>
@@ -58,11 +58,11 @@
             <tr>
               <th class="p-3">Cliente</th>
               <th class="p-3">Contacto / Envío</th>
-              <th class="p-3">Detalle Productos / Especificaciones</th>
-              <th class="p-3">Info de Pago</th>
+              <th class="p-3">Detalle Productos / Opciones</th>
+              <th class="p-3">Info de Pago / Comprobante</th>
               <th class="p-3">Total</th>
-              <th class="p-3">Estado</th>
-              <th class="p-3">Acciones</th>
+              <th class="p-3">Estado Actual</th>
+              <th class="p-3">Acciones de Aprobación</th>
             </tr>
           </thead>
           <tbody id="orders-table-body" class="divide-y"></tbody>
@@ -83,7 +83,7 @@
 
   </main>
 
-  <!-- MODAL MULTICOMERCIO DE PRODUCTO -->
+  <!-- MODAL DE PRODUCTO -->
   <div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg p-6 rounded-xl shadow-xl max-h-[90vh] overflow-y-auto">
       <h2 id="modal-title" class="text-xl font-bold mb-4">Nuevo Producto / Servicio</h2>
@@ -132,7 +132,7 @@
 
         <div class="flex items-center space-x-2">
           <input type="checkbox" id="prod-custom-text" class="w-4 h-4 text-blue-600 rounded">
-          <label for="prod-custom-text" class="text-sm font-medium text-gray-700">Permitir campo de texto personalizado (Didácticos / Grabados)</label>
+          <label for="prod-custom-text" class="text-sm font-medium text-gray-700">Permitir campo de texto personalizado</label>
         </div>
 
         <div>
