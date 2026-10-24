@@ -164,16 +164,34 @@ function renderOrders(items) {
         }).join('<br>')
       : 'Sin detalle';
 
+    const proofLink = order.payment_proof_url ? `<br><a href="${order.payment_proof_url}" target="_blank" class="text-blue-600 underline text-xs font-bold">[Ver Comprobante]</a>` : '';
+
+    // Lógica dinámica de botones según el estado actual
+    let actionButtonHtml = '';
+    const currentStatus = (order.status || 'pendiente').toLowerCase();
+
+    if (currentStatus === 'pendiente') {
+      actionButtonHtml = `<button onclick="updateOrderStatus('${order.id}', 'pedido_aprobado')" class="bg-yellow-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-yellow-700 transition shadow-sm">Aprobar Pedido</button>`;
+    } else if (currentStatus === 'pedido_aprobado') {
+      actionButtonHtml = `<button onclick="updateOrderStatus('${order.id}', 'pago_aprobado')" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm">Aprobar Pago</button>`;
+    } else if (currentStatus === 'pago_aprobado') {
+      actionButtonHtml = `<button onclick="updateOrderStatus('${order.id}', 'enviado')" class="bg-purple-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-purple-700 transition shadow-sm">Aprobar Envío</button>`;
+    } else {
+      actionButtonHtml = `<span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">Completado / Enviado ✅</span>`;
+    }
+
     tbody.innerHTML += `
       <tr class="hover:bg-gray-50 border-b">
         <td class="p-3 font-bold">${order.customer_name}</td>
         <td class="p-3 text-xs">${order.customer_phone}<br>${order.shipping_address}</td>
         <td class="p-3 text-xs">${itemsSummary}</td>
-        <td class="p-3 text-xs">${order.payment_method || 'N/A'}<br>Ref: ${order.payment_reference || 'S/N'}</td>
+        <td class="p-3 text-xs"><b>${order.payment_method || 'N/A'}</b><br>Ref: ${order.payment_reference || 'S/N'}${proofLink}</td>
         <td class="p-3 font-bold text-blue-600">$${order.total_amount.toFixed(2)}</td>
-        <td class="p-3 text-xs uppercase font-bold">${order.status}</td>
+        <td class="p-3 text-xs uppercase font-bold text-gray-700">
+          <span class="bg-gray-100 px-2.5 py-1 rounded-md">${order.status}</span>
+        </td>
         <td class="p-3">
-          <button onclick="updateOrderStatus('${order.id}', 'pagado')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition">Aprobar</button>
+          ${actionButtonHtml}
         </td>
       </tr>
     `;
