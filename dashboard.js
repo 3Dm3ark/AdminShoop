@@ -173,7 +173,7 @@ function renderOrders(items) {
         <td class="p-3 font-bold text-blue-600">$${order.total_amount.toFixed(2)}</td>
         <td class="p-3 text-xs uppercase font-bold">${order.status}</td>
         <td class="p-3">
-          <button onclick="updateOrderStatus('${order.id}', 'pagado')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">Aprobar</button>
+          <button onclick="updateOrderStatus('${order.id}', 'pagado')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition">Aprobar</button>
         </td>
       </tr>
     `;
@@ -181,7 +181,11 @@ function renderOrders(items) {
 }
 
 async function updateOrderStatus(orderId, newStatus) {
-  await supabaseAdmin.from('orders').update({ status: newStatus }).eq('id', orderId);
+  const { error } = await supabaseAdmin.from('orders').update({ status: newStatus }).eq('id', orderId);
+  if (error) {
+    alert('Error al actualizar el estado: ' + error.message);
+    return;
+  }
   fetchAdminOrders();
 }
 
