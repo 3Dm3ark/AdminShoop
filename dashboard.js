@@ -64,7 +64,7 @@ async function saveProduct(event) {
   const stock = parseInt(document.getElementById('prod-stock').value);
   const sortOrder = parseInt(document.getElementById('prod-sort').value) || 0;
   const type = document.getElementById('prod-type').value;
-  const category = document.getElementById('prod-category').value;
+  const gender = document.getElementById('prod-gender').value;
   const sizes = document.getElementById('prod-sizes').value.split(',').map(s => s.trim()).filter(Boolean);
   const fabrics = document.getElementById('prod-fabrics').value.split(',').map(f => f.trim()).filter(Boolean);
   const collars = document.getElementById('prod-collars').value.split(',').map(c => c.trim()).filter(Boolean);
@@ -83,7 +83,7 @@ async function saveProduct(event) {
   }
 
   const customFields = { fabrics, collars, allow_custom_text: allowCustomText };
-  const productData = { name, price, stock, sort_order: sortOrder, product_type: type, category, sizes, custom_fields: customFields, description };
+  const productData = { name, price, stock, sort_order: sortOrder, product_type: type, gender, sizes, custom_fields: customFields, description };
   if (imageUrl) { productData.main_image = imageUrl; productData.images = [imageUrl]; }
 
   let result = id ? await supabaseAdmin.from('products').update(productData).eq('id', id) : await supabaseAdmin.from('products').insert([productData]);
@@ -98,7 +98,7 @@ async function editProduct(id) {
   if (!p) return;
   document.getElementById('prod-id').value = p.id;
   document.getElementById('prod-type').value = p.product_type || 'standard';
-  document.getElementById('prod-category').value = p.category || 'damas';
+  document.getElementById('prod-gender').value = p.gender || 'damas';
   document.getElementById('prod-name').value = p.name;
   document.getElementById('prod-price').value = p.price;
   document.getElementById('prod-stock').value = p.stock;
