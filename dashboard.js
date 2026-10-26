@@ -51,7 +51,7 @@ function renderAdminProducts(items) {
 function openProductModal() {
   document.getElementById('product-form').reset();
   document.getElementById('prod-id').value = '';
-  document.getElementById('prod-image-file').value = ''; // Resetear selector de archivo
+  document.getElementById('prod-image-file').value = '';
   document.getElementById('product-modal').classList.remove('hidden');
 }
 
@@ -63,7 +63,6 @@ async function editProduct(id) {
   const p = productsList.find(item => item.id === id);
   if (!p) return;
 
-  // Reseteamos el formulario antes de cargar los datos
   document.getElementById('product-form').reset();
   document.getElementById('prod-image-file').value = '';
 
@@ -77,6 +76,7 @@ async function editProduct(id) {
   document.getElementById('prod-sizes').value = p.sizes ? p.sizes.join(', ') : '';
   document.getElementById('prod-fabrics').value = p.custom_fields?.fabrics ? p.custom_fields.fabrics.join(', ') : '';
   document.getElementById('prod-collars').value = p.custom_fields?.collars ? p.custom_fields.collars.join(', ') : '';
+  document.getElementById('prod-colors').value = p.custom_fields?.colors ? p.custom_fields.colors.join(', ') : '';
   document.getElementById('prod-custom-text').checked = !!p.custom_fields?.allow_custom_text;
   document.getElementById('prod-desc').value = p.description || '';
 
@@ -95,6 +95,7 @@ async function saveProduct(event) {
   const sizes = document.getElementById('prod-sizes').value.split(',').map(s => s.trim()).filter(Boolean);
   const fabrics = document.getElementById('prod-fabrics').value.split(',').map(f => f.trim()).filter(Boolean);
   const collars = document.getElementById('prod-collars').value.split(',').map(c => c.trim()).filter(Boolean);
+  const colors = document.getElementById('prod-colors').value.split(',').map(c => c.trim()).filter(Boolean);
   const allowCustomText = document.getElementById('prod-custom-text').checked;
   const description = document.getElementById('prod-desc').value;
   
@@ -103,7 +104,6 @@ async function saveProduct(event) {
 
   let imageUrl = null;
 
-  // 1. Si el usuario subió una NUEVA imagen en el formulario
   if (imageFile) {
     const fileName = `${Date.now()}_${imageFile.name}`;
     const { error: uploadError } = await supabaseAdmin.storage.from('products').upload(fileName, imageFile);
@@ -115,7 +115,6 @@ async function saveProduct(event) {
       return;
     }
   } 
-  // 2. Si no subió una nueva imagen y estamos EDITANDO, conservamos la imagen anterior
   else if (id) {
     const existingProduct = productsList.find(item => item.id === id);
     if (existingProduct) {
@@ -123,7 +122,7 @@ async function saveProduct(event) {
     }
   }
 
-  const customFields = { fabrics, collars, allow_custom_text: allowCustomText };
+  const customFields = { fabrics, collars, colors, allow_custom_text: allowCustomText };
   const productData = { 
     name, 
     price, 
@@ -136,7 +135,6 @@ async function saveProduct(event) {
     description 
   };
 
-  // Asignamos la imagen (ya sea la nueva o la conservada previa)
   if (imageUrl) { 
     productData.main_image = imageUrl; 
     productData.images = [imageUrl]; 
@@ -151,7 +149,6 @@ async function saveProduct(event) {
     return; 
   }
 
-  // Limpiamos el selector de archivo para que no recuerde la última imagen en la siguiente edición
   imageFileInput.value = '';
 
   closeProductModal();
