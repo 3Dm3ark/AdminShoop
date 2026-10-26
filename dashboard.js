@@ -54,6 +54,11 @@ function openProductModal() {
   document.getElementById('prod-image-file').value = ''; // Resetear selector de archivo
   document.getElementById('product-modal').classList.remove('hidden');
 }
+
+function closeProductModal() { 
+  document.getElementById('product-modal').classList.add('hidden'); 
+}
+
 async function editProduct(id) {
   const p = productsList.find(item => item.id === id);
   if (!p) return;
@@ -76,45 +81,6 @@ async function editProduct(id) {
   document.getElementById('prod-desc').value = p.description || '';
 
   document.getElementById('product-modal').classList.remove('hidden');
-}
-
-function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
-
-async function saveProduct(event) {
-  event.preventDefault();
-  const id = document.getElementById('prod-id').value;
-  const name = document.getElementById('prod-name').value;
-  const price = parseFloat(document.getElementById('prod-price').value);
-  const stock = parseInt(document.getElementById('prod-stock').value);
-  const sortOrder = parseInt(document.getElementById('prod-sort').value) || 0;
-  const type = document.getElementById('prod-type').value;
-  const gender = document.getElementById('prod-gender').value;
-  const sizes = document.getElementById('prod-sizes').value.split(',').map(s => s.trim()).filter(Boolean);
-  const fabrics = document.getElementById('prod-fabrics').value.split(',').map(f => f.trim()).filter(Boolean);
-  const collars = document.getElementById('prod-collars').value.split(',').map(c => c.trim()).filter(Boolean);
-  const allowCustomText = document.getElementById('prod-custom-text').checked;
-  const description = document.getElementById('prod-desc').value;
-  const imageFile = document.getElementById('prod-image-file').files[0];
-
-  let imageUrl = null;
-  if (imageFile) {
-    const fileName = `${Date.now()}_${imageFile.name}`;
-    const { error: uploadError } = await supabaseAdmin.storage.from('products').upload(fileName, imageFile);
-    if (!uploadError) {
-      const { data: urlData } = supabaseAdmin.storage.from('products').getPublicUrl(fileName);
-      imageUrl = urlData.publicUrl;
-    }
-  }
-
-  const customFields = { fabrics, collars, allow_custom_text: allowCustomText };
-  const productData = { name, price, stock, sort_order: sortOrder, product_type: type, gender, sizes, custom_fields: customFields, description };
-  if (imageUrl) { productData.main_image = imageUrl; productData.images = [imageUrl]; }
-
-  let result = id ? await supabaseAdmin.from('products').update(productData).eq('id', id) : await supabaseAdmin.from('products').insert([productData]);
-  if (result.error) { alert('Error: ' + result.error.message); return; }
-
-  closeProductModal();
-  fetchAdminProducts();
 }
 
 async function saveProduct(event) {
@@ -191,6 +157,7 @@ async function saveProduct(event) {
   closeProductModal();
   fetchAdminProducts();
 }
+
 async function deleteProduct(id) {
   if (!confirm('¿Eliminar producto?')) return;
   await supabaseAdmin.from('products').delete().eq('id', id);
