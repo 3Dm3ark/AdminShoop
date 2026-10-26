@@ -51,6 +51,30 @@ function renderAdminProducts(items) {
 function openProductModal() {
   document.getElementById('product-form').reset();
   document.getElementById('prod-id').value = '';
+  document.getElementById('prod-image-file').value = ''; // Resetear selector de archivo
+  document.getElementById('product-modal').classList.remove('hidden');
+}
+async function editProduct(id) {
+  const p = productsList.find(item => item.id === id);
+  if (!p) return;
+
+  // Reseteamos el formulario antes de cargar los datos
+  document.getElementById('product-form').reset();
+  document.getElementById('prod-image-file').value = '';
+
+  document.getElementById('prod-id').value = p.id;
+  document.getElementById('prod-type').value = p.product_type || 'standard';
+  document.getElementById('prod-gender').value = p.gender || 'damas';
+  document.getElementById('prod-name').value = p.name;
+  document.getElementById('prod-price').value = p.price;
+  document.getElementById('prod-stock').value = p.stock;
+  document.getElementById('prod-sort').value = p.sort_order || 0;
+  document.getElementById('prod-sizes').value = p.sizes ? p.sizes.join(', ') : '';
+  document.getElementById('prod-fabrics').value = p.custom_fields?.fabrics ? p.custom_fields.fabrics.join(', ') : '';
+  document.getElementById('prod-collars').value = p.custom_fields?.collars ? p.custom_fields.collars.join(', ') : '';
+  document.getElementById('prod-custom-text').checked = !!p.custom_fields?.allow_custom_text;
+  document.getElementById('prod-desc').value = p.description || '';
+
   document.getElementById('product-modal').classList.remove('hidden');
 }
 
@@ -93,24 +117,80 @@ async function saveProduct(event) {
   fetchAdminProducts();
 }
 
-async function editProduct(id) {
-  const p = productsList.find(item => item.id === id);
-  if (!p) return;
-  document.getElementById('prod-id').value = p.id;
-  document.getElementById('prod-type').value = p.product_type || 'standard';
-  document.getElementById('prod-gender').value = p.gender || 'damas';
-  document.getElementById('prod-name').value = p.name;
-  document.getElementById('prod-price').value = p.price;
-  document.getElementById('prod-stock').value = p.stock;
-  document.getElementById('prod-sort').value = p.sort_order || 0;
-  document.getElementById('prod-sizes').value = p.sizes ? p.sizes.join(', ') : '';
-  document.getElementById('prod-fabrics').value = p.custom_fields?.fabrics ? p.custom_fields.fabrics.join(', ') : '';
-  document.getElementById('prod-collars').value = p.custom_fields?.collars ? p.custom_fields.collars.join(', ') : '';
-  document.getElementById('prod-custom-text').checked = !!p.custom_fields?.allow_custom_text;
-  document.getElementById('prod-desc').value = p.description || '';
-  document.getElementById('product-modal').classList.remove('hidden');
-}
+async function saveProduct(event) {
+  event.preventDefault();
+  const id = document.getElementById('prod-id').value;
+  const name = document.getElementById('prod-name').value;
+  const price = parseFloat(document.getElementById('prod-price').value);
+  const stock = parseInt(document.getElementById('prod-stock').value);
+  const sortOrder = parseInt(document.getElementById('prod-sort').value) || 0;
+  const type = document.getElementById('prod-type').value;
+  const gender = document.getElementById('prod-gender').value;
+  const sizes = document.getElementById('prod-sizes').value.split(',').map(s => s.trim()).filter(Boolean);
+  const fabrics = document.getElementById('prod-fabrics').value.split(',').map(f => f.trim()).filter(Boolean);
+  const collars = document.getElementById('prod-collars').value.split(',').map(c => c.trim()).filter(Boolean);
+  const allowCustomText = document.getElementById('prod-custom-text').checked;
+  const description = document.getElementById('prod-desc').value;
+  
+  const imageFileInput = document.getElementById('prod-image-file');
+  const imageFile = imageFileInput.files[0];
 
+  let imageUrl = null;
+
+  // 1. Si el usuario subió una NUEVA imagen en el formulario
+  if (imageFile) {
+    const fileName = `${Date.now()}_${imageFile.name}`;
+    const { error: uploadError } = await supabaseAdmin.storage.from('products').upload(fileName, imageFile);
+    if (!uploadError) {
+      const { data: urlData } = supabaseAdmin.storage.from('products').getPublicUrl(fileName);
+      imageUrl = urlData.publicUrl;
+    } else {
+      alert('Error al subir la nueva imagen: ' + uploadError.message);
+      return;
+    }
+  } 
+  // 2. Si no subió una nueva imagen y estamos EDITANDO, conservamos la imagen anterior
+  else if (id) {
+    const existingProduct = productsList.find(item => item.id === id);
+    if (existingProduct) {
+      imageUrl = existingProduct.main_image || (existingProduct.images && existingProduct.images[0]) || null;
+    }
+  }
+
+  const customFields = { fabrics, collars, allow_custom_text: allowCustomText };
+  const productData = { 
+    name, 
+    price, 
+    stock, 
+    sort_order: sortOrder, 
+    product_type: type, 
+    gender, 
+    sizes, 
+    custom_fields: customFields, 
+    description 
+  };
+
+  // Asignamos la imagen (ya sea la nueva o la conservada previa)
+  if (imageUrl) { 
+    productData.main_image = imageUrl; 
+    productData.images = [imageUrl]; 
+  }
+
+  let result = id 
+    ? await supabaseAdmin.from('products').update(productData).eq('id', id) 
+    : await supabaseAdmin.from('products').insert([productData]);
+
+  if (result.error) { 
+    alert('Error al guardar producto: ' + result.error.message); 
+    return; 
+  }
+
+  // Limpiamos el selector de archivo para que no recuerde la última imagen en la siguiente edición
+  imageFileInput.value = '';
+
+  closeProductModal();
+  fetchAdminProducts();
+}
 async function deleteProduct(id) {
   if (!confirm('¿Eliminar producto?')) return;
   await supabaseAdmin.from('products').delete().eq('id', id);
