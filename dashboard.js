@@ -15,7 +15,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 function switchTab(tabName) {
   document.getElementById('section-products').classList.add('hidden');
   document.getElementById('section-orders').classList.add('hidden');
+  
+  document.getElementById('tab-products-btn').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-200 whitespace-nowrap";
+  document.getElementById('tab-orders-btn').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-200 whitespace-nowrap";
+
   document.getElementById(`section-${tabName}`).classList.remove('hidden');
+  document.getElementById(`tab-${tabName}-btn`).className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-gray-900 text-white whitespace-nowrap";
 }
 
 async function fetchAdminProducts() {
