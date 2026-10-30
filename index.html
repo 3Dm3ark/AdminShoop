@@ -3,144 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Admin Multicomercio</title>
+  <title>Tienda Multicomercio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
   <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-      <div class="flex items-center space-x-4">
-        <h1 class="text-xl font-bold">🛠️ Panel Admin</h1>
-        <nav class="hidden md:flex space-x-2">
-          <button onclick="switchTab('products')" id="tab-products-btn" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-900 text-white">Productos</button>
-          <button onclick="switchTab('orders')" id="tab-orders-btn" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200">Pedidos</button>
-        </nav>
+      <h1 class="text-lg font-black tracking-tight text-gray-900">🛍️ MULTICOMERCIO</h1>
+      <div class="flex items-center space-x-3">
+        <div class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-bold">
+          BCV: <span id="bcv-rate-display">Cargando...</span>
+        </div>
+        <button onclick="toggleTrackingModal()" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-xl text-xs font-bold transition">Rastrear Pedido</button>
+        <button onclick="toggleCart()" class="bg-gray-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold relative transition">
+          Carrito 🛒 <span id="cart-counter" class="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full text-[10px] flex items-center justify-center">0</span>
+        </button>
       </div>
-      <button onclick="logout()" class="text-sm font-medium text-red-600 hover:text-red-800">Cerrar Sesión</button>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
-    <section id="section-products" class="space-y-6">
-      <div class="flex justify-between items-center">
-        <h2 class="text-2xl font-bold">Catálogo</h2>
-        <button onclick="openProductModal()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Nuevo Producto</button>
-      </div>
-      <div id="admin-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
-    </section>
+  <!-- FILTROS DE SECCIÓN / GÉNERO -->
+  <nav class="bg-white border-b py-2.5 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 flex gap-2 overflow-x-auto no-scrollbar">
+      <button onclick="filterProducts('all')" data-category="all" class="filter-btn bg-gray-900 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap">Todo</button>
+      <button onclick="filterProducts('damas')" data-category="damas" class="filter-btn bg-gray-100 text-gray-700 px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap">Damas</button>
+      <button onclick="filterProducts('caballero')" data-category="caballero" class="filter-btn bg-gray-100 text-gray-700 px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap">Caballero</button>
+      <button onclick="filterProducts('ninos')" data-category="ninos" class="filter-btn bg-gray-100 text-gray-700 px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap">Niños</button>
+      <button onclick="filterProducts('didactico')" data-category="didactico" class="filter-btn bg-gray-100 text-gray-700 px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap">Didáctico</button>
+      <button onclick="filterProducts('metered')" data-category="metered" class="filter-btn bg-gray-100 text-gray-700 px-4 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap">Por Metros (DTF)</button>
+    </div>
+  </nav>
 
-    <section id="section-orders" class="space-y-6 hidden">
-      <h2 class="text-2xl font-bold">Control de Pedidos y Etapas</h2>
-      <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-        <table class="w-full text-left border-collapse text-sm">
-          <thead class="bg-gray-50 border-b text-gray-700 font-semibold">
-            <tr>
-              <th class="p-3">Cliente</th>
-              <th class="p-3">Contacto / Envío</th>
-              <th class="p-3">Productos</th>
-              <th class="p-3">Pago / Comprobante</th>
-              <th class="p-3">Total</th>
-              <th class="p-3">Estado</th>
-              <th class="p-3">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="orders-table-body" class="divide-y"></tbody>
-        </table>
-      </div>
-    </section>
+  <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+    <div id="store-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
   </main>
 
-  <!-- MODAL PRODUCTO -->
-  <div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg p-6 rounded-xl shadow-xl max-h-[90vh] overflow-y-auto">
-      <h2 id="modal-title" class="text-xl font-bold mb-4">Producto / Servicio</h2>
-      <form id="product-form" onsubmit="saveProduct(event)" class="space-y-4">
-        <input type="hidden" id="prod-id">
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Comercio / Producto</label>
-          <select id="prod-type" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
-            <option value="standard">Estándar / Didáctico</option>
-            <option value="configurable">Confección (Ropa / Tallas)</option>
-            <option value="metered">Impresión por Metro (DTF)</option>
+  <!-- CARRITO DRAWER -->
+  <div id="cart-drawer" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-end">
+    <div class="bg-white w-full max-w-md h-full p-6 shadow-2xl flex flex-col justify-between overflow-y-auto">
+      <div>
+        <div class="flex justify-between items-center border-b pb-4 mb-4">
+          <h2 class="font-bold text-base">Tu Carrito de Compras</h2>
+          <button onclick="toggleCart()" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+        </div>
+        <div id="cart-items-container" class="space-y-4 mb-6"></div>
+      </div>
+
+      <div class="border-t pt-4 space-y-4">
+        <div class="flex justify-between font-black text-base">
+          <span>Total:</span>
+          <span id="cart-total-amount" class="text-blue-600">$0.00</span>
+        </div>
+
+        <form id="checkout-form" onsubmit="submitOrder(event)" class="space-y-3">
+          <input type="text" id="cust-name" required placeholder="Nombre Completo" class="w-full border rounded-xl p-2.5 text-xs outline-none">
+          <input type="tel" id="cust-phone" required placeholder="Teléfono / WhatsApp" class="w-full border rounded-xl p-2.5 text-xs outline-none">
+          <input type="email" id="cust-email" placeholder="Correo Electrónico" class="w-full border rounded-xl p-2.5 text-xs outline-none">
+          <textarea id="cust-address" required rows="2" placeholder="Dirección de envío o entrega" class="w-full border rounded-xl p-2.5 text-xs outline-none"></textarea>
+          
+          <select id="pay-method" required class="w-full border rounded-xl p-2.5 text-xs bg-white outline-none">
+            <option value="">Selecciona Método de Pago</option>
+            <option value="Pago Móvil">Pago Móvil</option>
+            <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+            <option value="Binance">Binance</option>
+            <option value="Efectivo / Divisas">Efectivo / Divisas</option>
           </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Sección / Género</label>
-          <select id="prod-gender" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-            <option value="damas">Damas</option>
-            <option value="caballero">Caballero</option>
-            <option value="ninos">Niños</option>
-            <option value="didactico">Didáctico</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-          <input type="text" id="prod-name" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
-        </div>
-
-        <div class="grid grid-cols-3 gap-2">
+          <input type="text" id="pay-reference" required placeholder="Nro. de Referencia de Pago" class="w-full border rounded-xl p-2.5 text-xs outline-none">
+          
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio ($)</label>
-            <input type="number" step="0.01" id="prod-price" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
+            <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Comprobante de Pago:</label>
+            <input type="file" id="pay-proof-file" accept="image/*" required class="w-full border rounded-xl p-1.5 text-xs bg-white">
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-            <input type="number" id="prod-stock" required class="w-full border rounded-lg p-2.5 text-sm outline-none">
+
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="clearCart()" class="w-1/3 border py-2.5 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100">Vaciar</button>
+            <button type="submit" class="w-2/3 bg-gray-900 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-gray-800 transition">Confirmar Pedido 🚀</button>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Posición</label>
-            <input type="number" id="prod-sort" value="0" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tallas (Separadas por coma)</label>
-          <input type="text" id="prod-sizes" placeholder="S, M, L" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Telas (Separadas por coma)</label>
-          <input type="text" id="prod-fabrics" placeholder="Piqué, Algodón" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Cuellos (Separados por coma)</label>
-          <input type="text" id="prod-collars" placeholder="V, Redondo, Polo" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Colores (Separados por coma)</label>
-          <input type="text" id="prod-colors" placeholder="Rojo, Azul, Negro" class="w-full border rounded-lg p-2.5 text-sm outline-none">
-        </div>
-
-        <div class="flex items-center space-x-2">
-          <input type="checkbox" id="prod-custom-text" class="w-4 h-4">
-          <label for="prod-custom-text" class="text-sm font-medium text-gray-700">Permitir texto personalizado</label>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-          <textarea id="prod-desc" rows="2" class="w-full border rounded-lg p-2.5 text-sm outline-none"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Imagen Principal</label>
-          <input type="file" id="prod-image-file" accept="image/*" class="w-full border rounded-lg p-2 text-sm">
-        </div>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <button type="button" onclick="closeProductModal()" class="px-4 py-2 border rounded-lg text-sm font-medium">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium">Guardar</button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
-  <script src="dashboard.js"></script>
+  <!-- MODAL DE RASTREO -->
+  <div id="tracking-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg p-6 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h2 class="font-bold text-sm">Rastrear tus Pedidos</h2>
+        <button onclick="toggleTrackingModal()" class="text-gray-400 font-bold">✕</button>
+      </div>
+      <form onsubmit="trackOrder(event)" class="flex gap-2">
+        <input type="text" id="track-input" required placeholder="Ingresa tu Teléfono o ID de Orden" class="w-full border rounded-xl p-2.5 text-xs outline-none">
+        <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-xl text-xs font-bold">Buscar</button>
+      </form>
+      <div id="tracking-results" class="space-y-4 hidden"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
